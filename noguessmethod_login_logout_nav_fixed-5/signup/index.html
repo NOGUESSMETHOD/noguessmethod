@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NoGuessMethod | Signup</title>
+<link rel="stylesheet" href="/assets/style.css">
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+</head>
+<body>
+
+
+<header class="site-header">
+  <a href="/" class="brand" aria-label="NoGuessMethod home">
+    <img src="/assets/ngm-logo-square.jpeg" alt="NGM" class="logo-square">
+  </a>
+  <nav class="nav">
+    <a href="/">Main</a>
+    <a href="/free">Free Board</a>
+    <a href="/signup" data-auth="logged-out">Sign Up</a>
+    <a href="/login" class="primary" data-auth="logged-out">Login</a>
+    <a href="/workout" data-auth="logged-in">Today's Workout</a>
+    <a href="/premium" data-auth="logged-in">Premium</a>
+    <a href="/account" data-auth="logged-in" class="primary">Member Hub</a>
+    <button type="button" class="logout-button auth-nav-hidden" data-auth="logged-in" data-logout>Log Out</button>
+  </nav>
+</header>
+
+<main class="auth">
+  <section class="card auth-panel">
+    <div class="eyebrow">Create Account</div>
+    <img class="auth-logo" src="/assets/ngm-logo-square.jpeg" alt="NGM">
+    <h2>Create Account</h2>
+    <p>Create your NoGuessMethod account and access the member hub.</p>
+    <form class="form" id="auth-form">
+      <label>Username<input id="username" placeholder="Username" required></label>
+      <label>Email<input id="email" type="email" placeholder="you@example.com" required></label>
+      <label>Password<input id="password" type="password" placeholder="Password" required></label>
+      <label>Confirm Password<input id="confirm" type="password" placeholder="Confirm password" required></label>
+      <button class="primary" type="submit">Create Account</button>
+    </form>
+    <p class="status">Already have an account? <a href="/login">Login</a></p>
+    <div class="status" id="auth-status"></div>
+  </section>
+  <section class="card logo-stage"><img src="/assets/ngm-logo-banner.jpeg" alt="NoGuessMethod"></section>
+</main>
+
+<footer class="footer">
+  <span>NoGuessMethod</span>
+  <span><a href="/">Main</a> · <a href="/free">Free Board</a> · · <a href="/investors">Investors</a></span>
+  <span>© 2026 NoGuessMethod</span>
+</footer>
+
+
+
+<script src="/assets/supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+function ngmClient(){
+  return window.supabase.createClient(window.NGM_SUPABASE_URL, window.NGM_SUPABASE_ANON_KEY);
+}
+function setStatus(id,msg){
+  const el=document.getElementById(id);
+  if(el) el.textContent=msg;
+}
+</script>
+
+
+<script>
+document.getElementById("auth-form").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const sb=ngmClient();
+  const email=document.getElementById("email").value.trim();
+  const password=document.getElementById("password").value;
+
+  const confirm=document.getElementById("confirm").value;
+  const username=document.getElementById("username").value.trim();
+  if(password!==confirm){setStatus("auth-status","Passwords do not match.");return;}
+  try{
+    const {data,error}=await sb.auth.signUp({email,password,options:{data:{username}, emailRedirectTo:'https://noguessmethod.com/account'}});
+    if(error) throw error;
+    if(data.user){await sb.from("profiles").insert({id:data.user.id,username,role:"member"});}
+    setStatus("auth-status","Account created. Check your email if confirmation is required.");
+  }catch(err){setStatus("auth-status",err.message||"Signup failed.");}
+
+});
+</script>
+
+
+<script>
+async function ngmUpdateNav(){
+  const sb = ngmClient();
+  const { data:{ session } } = await sb.auth.getSession();
+  document.querySelectorAll('[data-auth="logged-out"]').forEach(el=>{ session ? el.classList.add("auth-nav-hidden") : el.classList.remove("auth-nav-hidden"); });
+  document.querySelectorAll('[data-auth="logged-in"]').forEach(el=>{ session ? el.classList.remove("auth-nav-hidden") : el.classList.add("auth-nav-hidden"); });
+  document.querySelectorAll('[data-logout]').forEach(btn=>{ btn.onclick = async ()=>{ await sb.auth.signOut(); window.location.href="/"; }; });
+}
+document.addEventListener("DOMContentLoaded", ngmUpdateNav);
+</script>
+
+</body>
+</html>

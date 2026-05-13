@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NoGuessMethod | Free Board</title>
+<link rel="stylesheet" href="/assets/style.css">
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+</head>
+<body>
+
+
+<header class="site-header">
+  <a href="/" class="brand" aria-label="NoGuessMethod home">
+    <img src="/assets/ngm-logo-square.jpeg" alt="NGM" class="logo-square">
+  </a>
+  <nav class="nav">
+    <a href="/">Main</a>
+    <a href="/free">Free Board</a>
+    <a href="/signup" data-auth="logged-out">Sign Up</a>
+    <a href="/login" class="primary" data-auth="logged-out">Login</a>
+    <a href="/workout" data-auth="logged-in">Today's Workout</a>
+    <a href="/premium" data-auth="logged-in">Premium</a>
+    <a href="/account" data-auth="logged-in" class="primary">Member Hub</a>
+    <button type="button" class="logout-button auth-nav-hidden" data-auth="logged-in" data-logout>Log Out</button>
+  </nav>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <div class="card hero-copy">
+      <div class="eyebrow">Free Member Board</div>
+      <h1>No Guess.<br>Just<br>Check In.</h1>
+      <p class="lead">A lightweight message board for free members to submit training questions, progress updates, and consistency wins while the beta grows.</p>
+      <div class="feature-row">
+        <div class="mini"><strong>Weekly Check-In</strong><span>Training days, misses, and fixes.</span></div>
+        <div class="mini"><strong>Plateau Questions</strong><span>Ask what to do when progress stalls.</span></div>
+        <div class="mini"><strong>Exercise Swaps</strong><span>Keep structure without guessing.</span></div>
+      </div>
+      <div class="actions">
+        <a class="btn primary" href="#post">Enter Board</a>
+        <a class="btn" href="/">Main Site</a>
+      </div>
+    </div>
+    <div class="card logo-stage"><img src="/assets/ngm-logo-banner.jpeg" alt="NoGuessMethod"></div>
+  </section>
+  <section class="board">
+    <div class="card hero-copy">
+      <div class="eyebrow">Pinned Boards</div>
+      <div class="thread"><h3>Weekly Check-In</h3><p>Post training days completed, missed sessions, and what you need to fix this week.</p></div>
+      <div class="thread"><h3>Plateau Questions</h3><p>Ask what to do when your lifts stall, your split feels stale, or recovery falls off.</p></div>
+      <div class="thread"><h3>Exercise Swaps</h3><p>Share questions about substitutions, setup cues, and avoiding random changes.</p></div>
+    </div>
+    <div class="card hero-copy" id="post">
+      <div class="eyebrow">Submit to Board</div>
+      <h2>Free Member Message</h2>
+      <p>Submissions go to your team first so posts can be reviewed before publishing.</p>
+      <form id="free-post-form" class="form">
+        <label>Name<input name="name" placeholder="Your name" required></label>
+        <label>Email<input name="email" type="email" placeholder="you@example.com" required></label>
+        <label>Board<select name="board" required><option value="">Choose a board</option><option>Weekly Check-In</option><option>Plateau Questions</option><option>Exercise Swaps</option></select></label>
+        <label>Message<textarea name="message" placeholder="Write your message..." required></textarea></label>
+        <button class="primary" type="submit">Submit Message</button>
+      </form>
+      <div id="free-status" class="status"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <span>NoGuessMethod</span>
+  <span><a href="/">Main</a> · <a href="/free">Free Board</a> · · <a href="/investors">Investors</a></span>
+  <span>© 2026 NoGuessMethod</span>
+</footer>
+
+
+
+<script src="/assets/supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+function ngmClient(){
+  return window.supabase.createClient(window.NGM_SUPABASE_URL, window.NGM_SUPABASE_ANON_KEY);
+}
+function setStatus(id,msg){
+  const el=document.getElementById(id);
+  if(el) el.textContent=msg;
+}
+</script>
+
+
+<script>
+const freeForm=document.getElementById("free-post-form");
+if(freeForm){
+  freeForm.addEventListener("submit",async e=>{
+    e.preventDefault();
+    try{
+      const sb=ngmClient();
+      const fd=new FormData(freeForm);
+      const {error}=await sb.from("free_posts").insert({
+        name:fd.get("name"),
+        email:fd.get("email"),
+        board:fd.get("board"),
+        message:fd.get("message"),
+        status:"pending"
+      });
+      if(error) throw error;
+      setStatus("free-status","Submitted. Your message is pending review.");
+      freeForm.reset();
+    }catch(err){setStatus("free-status",err.message||"Submission failed.");}
+  });
+}
+</script>
+
+
+<script>
+async function ngmUpdateNav(){
+  const sb = ngmClient();
+  const { data:{ session } } = await sb.auth.getSession();
+  document.querySelectorAll('[data-auth="logged-out"]').forEach(el=>{ session ? el.classList.add("auth-nav-hidden") : el.classList.remove("auth-nav-hidden"); });
+  document.querySelectorAll('[data-auth="logged-in"]').forEach(el=>{ session ? el.classList.remove("auth-nav-hidden") : el.classList.add("auth-nav-hidden"); });
+  document.querySelectorAll('[data-logout]').forEach(btn=>{ btn.onclick = async ()=>{ await sb.auth.signOut(); window.location.href="/"; }; });
+}
+document.addEventListener("DOMContentLoaded", ngmUpdateNav);
+</script>
+
+</body>
+</html>

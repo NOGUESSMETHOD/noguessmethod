@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NoGuessMethod | You're Premium</title>
+<link rel="stylesheet" href="/assets/style.css">
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+</head>
+<body>
+
+<header class="site-header">
+  <a href="/" class="brand" aria-label="NoGuessMethod home">
+    <img src="/assets/ngm-logo-square.jpeg" alt="NGM" class="logo-square">
+  </a>
+  <nav class="nav">
+    <a href="/">Main</a>
+    <a href="/free">Free Board</a>
+    <a href="/signup" data-auth="logged-out">Sign Up</a>
+    <a href="/login" class="primary" data-auth="logged-out">Login</a>
+    <a href="/workout" data-auth="logged-in">Today's Workout</a>
+    <a href="/premium" data-auth="logged-in">Premium</a>
+    <a href="/account" data-auth="logged-in" class="primary">Member Hub</a>
+    <button type="button" class="logout-button auth-nav-hidden" data-auth="logged-in" data-logout>Log Out</button>
+  </nav>
+</header>
+
+<main class="member-hero">
+  <section class="card member-card">
+    <div class="eyebrow">Payment Confirmed</div>
+    <img class="auth-logo" src="/assets/ngm-logo-square.jpeg" alt="NGM">
+    <h2>You're Premium.</h2>
+    <p>Your subscription is active. Everything is unlocked — progression rules, form cues, muscle targets, and your daily nutrition brief.</p>
+
+    <div class="membership-box">
+      <div class="membership-top">
+        <strong>Premium Member</strong>
+        <span>Full NoGuessMethod access</span>
+      </div>
+      <div class="membership-perks">
+        <div class="perk"><b>Daily Workout</b><span>Unlocked</span></div>
+        <div class="perk"><b>Form Cues</b><span>Unlocked</span></div>
+        <div class="perk"><b>Progression Rules</b><span>Unlocked</span></div>
+        <div class="perk"><b>Daily Nutrition Brief</b><span>Unlocked</span></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <a class="btn primary" href="/workout">Go to Today's Workout</a>
+      <a class="btn" href="/account">Member Hub</a>
+    </div>
+  </section>
+
+  <section class="card hero-copy">
+    <div class="eyebrow">What's Unlocked</div>
+    <h2>The Full System.</h2>
+    <p class="lead">Every exercise in your daily program now includes the full breakdown — not just what to do, but exactly how to do it and when to push more.</p>
+    <div class="feature-row">
+      <div class="mini"><strong>Form Cues</strong><span>Technique notes for each exercise so every rep is intentional.</span></div>
+      <div class="mini"><strong>Progression Rules</strong><span>Know exactly when and how to add weight. No more guessing.</span></div>
+      <div class="mini"><strong>Nutrition Brief</strong><span>Daily fueling guidance matched to your session type.</span></div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <span>NoGuessMethod</span>
+  <span><a href="/">Main</a> · <a href="/free">Free Board</a> · <a href="/investors">Investors</a></span>
+  <span>© 2026 NoGuessMethod</span>
+</footer>
+
+<script src="/assets/supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+function ngmClient(){
+  return window.supabase.createClient(window.NGM_SUPABASE_URL, window.NGM_SUPABASE_ANON_KEY);
+}
+async function ngmUpdateNav(){
+  const sb = ngmClient();
+  const {data:{session}} = await sb.auth.getSession();
+  if(!session){ window.location.href='/login'; return; }
+  document.querySelectorAll('[data-auth="logged-out"]').forEach(el=>{
+    session ? el.classList.add("auth-nav-hidden") : el.classList.remove("auth-nav-hidden");
+  });
+  document.querySelectorAll('[data-auth="logged-in"]').forEach(el=>{
+    session ? el.classList.remove("auth-nav-hidden") : el.classList.add("auth-nav-hidden");
+  });
+  document.querySelectorAll('[data-logout]').forEach(btn=>{
+    btn.onclick = async ()=>{ await sb.auth.signOut(); window.location.href="/"; };
+  });
+}
+document.addEventListener('DOMContentLoaded', ngmUpdateNav);
+</script>
+</body>
+</html>

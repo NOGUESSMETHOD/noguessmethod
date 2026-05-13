@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NoGuessMethod | Premium Tools</title>
+<link rel="stylesheet" href="/assets/style.css">
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+</head>
+<body>
+<header class="site-header">
+  <a href="/" class="brand" aria-label="NoGuessMethod home">
+    <img src="/assets/ngm-logo-square.jpeg" alt="NGM" class="logo-square">
+  </a>
+  <nav class="nav">
+    <a href="/">Main</a>
+    <a href="/free">Free Board</a>
+    <a href="/signup" data-auth="logged-out">Sign Up</a>
+    <a href="/login" class="primary" data-auth="logged-out">Login</a>
+    <a href="/workout" data-auth="logged-in">Today's Workout</a>
+    <a href="/premium" data-auth="logged-in" class="primary">Premium</a>
+    <a href="/account" data-auth="logged-in">Member Hub</a>
+    <button type="button" class="logout-button auth-nav-hidden" data-auth="logged-in" data-logout>Log Out</button>
+  </nav>
+</header>
+
+<main class="premium-wrap">
+  <p class="workout-status" id="premium-status">Checking premium access...</p>
+
+  <section class="premium-lock-screen" id="premium-lock" style="display:none">
+    <div class="card hero-copy">
+      <div class="eyebrow">Premium Locked</div>
+      <h1>Upgrade to use the interactive system.</h1>
+      <p class="lead">Premium unlocks the goal planner, workout logger, plateau analyzer, exercise swap finder, and weekly check-in board.</p>
+      <div class="actions">
+        <a class="btn primary" href="/upgrade">Upgrade — $19.99/mo</a>
+        <a class="btn" href="/account">Back to Member Hub</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="premium-app" style="display:none">
+    <div class="card premium-hero-panel">
+      <div>
+        <div class="eyebrow">Premium System</div>
+        <h1>No Guess.<br>Track. Adjust. Progress.</h1>
+        <p class="lead">Use this hub to log today's training, generate a smarter next step, and keep your weekly check-in organized.</p>
+      </div>
+      <div class="premium-score-card">
+        <span class="premium-score-label">Readiness Score</span>
+        <strong id="readiness-score">—</strong>
+        <small id="readiness-note">Fill out the check-in to calculate.</small>
+      </div>
+    </div>
+
+    <div class="premium-grid">
+      <section class="card premium-tool-card">
+        <div class="eyebrow">1. Daily Check-In</div>
+        <h2>How are you entering today?</h2>
+        <div class="premium-slider-row">
+          <label>Energy <span id="energy-val">5</span>/10<input id="energy" type="range" min="1" max="10" value="5"></label>
+          <label>Soreness <span id="soreness-val">5</span>/10<input id="soreness" type="range" min="1" max="10" value="5"></label>
+          <label>Sleep <span id="sleep-val">7</span> hrs<input id="sleep" type="range" min="3" max="10" value="7"></label>
+        </div>
+        <button class="btn primary" type="button" onclick="calculateReadiness()">Calculate Readiness</button>
+        <p class="settings-status" id="readiness-detail"></p>
+      </section>
+
+      <section class="card premium-tool-card">
+        <div class="eyebrow">2. Goal Planner</div>
+        <h2>Set the next target.</h2>
+        <form class="form compact-form" id="goal-form">
+          <label>Primary Goal<input id="goal-name" placeholder="Bench 185, cut 10 lb, stay consistent..."></label>
+          <label>Deadline<input id="goal-deadline" type="date"></label>
+          <label>Weekly Actions<textarea id="goal-actions" placeholder="3 push sessions, protein target, sleep cutoff..."></textarea></label>
+          <button class="primary" type="submit">Save Goal</button>
+        </form>
+        <div class="premium-output" id="goal-output">No goal saved yet.</div>
+      </section>
+
+      <section class="card premium-tool-card">
+        <div class="eyebrow">3. Workout Logger</div>
+        <h2>Log today's session.</h2>
+        <form class="form compact-form" id="log-form">
+          <label>Workout Type<select id="log-type"><option>Push</option><option>Pull</option><option>Legs</option><option>Core/Mobility</option><option>Rest/Recovery</option></select></label>
+          <label>Main Lift<input id="log-lift" placeholder="Bench press, squat, row..."></label>
+          <label>Top Set<input id="log-topset" placeholder="135 x 8, 185 x 5..."></label>
+          <label>Notes<textarea id="log-notes" placeholder="What felt strong, weak, or off?"></textarea></label>
+          <button class="primary" type="submit">Save Log</button>
+        </form>
+        <div class="premium-output" id="log-output">No logs yet.</div>
+      </section>
+
+      <section class="card premium-tool-card">
+        <div class="eyebrow">4. Plateau Analyzer</div>
+        <h2>Choose your issue.</h2>
+        <form class="form compact-form" id="plateau-form">
+          <label>What is stuck?<select id="plateau-type"><option value="strength">Strength is not increasing</option><option value="fatigue">I feel tired every session</option><option value="pump">I do not feel the target muscle</option><option value="consistency">I keep missing workouts</option></select></label>
+          <label>How long?<select id="plateau-time"><option>1 week</option><option>2–3 weeks</option><option>1 month+</option></select></label>
+          <button class="primary" type="submit">Get Adjustment</button>
+        </form>
+        <div class="premium-output" id="plateau-output">Pick an issue to generate your next move.</div>
+      </section>
+
+      <section class="card premium-tool-card">
+        <div class="eyebrow">5. Exercise Swap Finder</div>
+        <h2>Replace without guessing.</h2>
+        <form class="form compact-form" id="swap-form">
+          <label>Exercise<select id="swap-exercise"><option>Barbell Bench Press</option><option>Back Squat</option><option>Barbell Row</option><option>Lat Pulldown</option><option>Romanian Deadlift</option><option>Overhead Press</option></select></label>
+          <label>Reason<select id="swap-reason"><option>Equipment unavailable</option><option>Pain/discomfort</option><option>Too crowded</option><option>Need easier setup</option></select></label>
+          <button class="primary" type="submit">Find Swap</button>
+        </form>
+        <div class="premium-output" id="swap-output">Choose an exercise to get a structured replacement.</div>
+      </section>
+
+      <section class="card premium-tool-card">
+        <div class="eyebrow">6. Weekly Check-In</div>
+        <h2>Send your review.</h2>
+        <form class="form compact-form" id="weekly-form">
+          <label>Wins<textarea id="weekly-wins" placeholder="What went right this week?"></textarea></label>
+          <label>Sticking Point<textarea id="weekly-stuck" placeholder="What needs adjustment?"></textarea></label>
+          <button class="primary" type="submit">Save Weekly Check-In</button>
+        </form>
+        <div class="premium-output" id="weekly-output">Your weekly check-in will save here and sync to Supabase if the table exists.</div>
+      </section>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <span>NoGuessMethod</span>
+  <span><a href="/">Main</a> · <a href="/free">Free Board</a> · <a href="/premium">Premium</a> · <a href="/investors">Investors</a></span>
+  <span>© 2026 NoGuessMethod</span>
+</footer>
+
+<script src="/assets/supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+function ngmClient(){ return window.supabase.createClient(window.NGM_SUPABASE_URL, window.NGM_SUPABASE_ANON_KEY); }
+let premiumUser = null;
+let sb = null;
+
+async function ngmUpdateNav(){
+  sb = ngmClient();
+  const {data:{session}} = await sb.auth.getSession();
+  document.querySelectorAll('[data-auth="logged-out"]').forEach(el=>{ session ? el.classList.add('auth-nav-hidden') : el.classList.remove('auth-nav-hidden'); });
+  document.querySelectorAll('[data-auth="logged-in"]').forEach(el=>{ session ? el.classList.remove('auth-nav-hidden') : el.classList.add('auth-nav-hidden'); });
+  document.querySelectorAll('[data-logout]').forEach(btn=>{ btn.onclick = async ()=>{ await sb.auth.signOut(); window.location.href='/'; }; });
+  return session;
+}
+
+function saveLocal(key, value){ localStorage.setItem('ngm_' + key, JSON.stringify(value)); }
+function readLocal(key, fallback){ try{return JSON.parse(localStorage.getItem('ngm_' + key)) ?? fallback;}catch{return fallback;} }
+function clean(value){ return String(value || '').trim(); }
+
+async function trySync(type, payload){
+  if(!sb || !premiumUser) return;
+  try{
+    await sb.from('premium_activity').insert({ user_id: premiumUser.id, activity_type: type, payload });
+  }catch(err){ console.warn('Premium sync skipped:', err.message); }
+}
+
+function updateSliderLabels(){
+  ['energy','soreness','sleep'].forEach(id=>{
+    const input=document.getElementById(id), out=document.getElementById(id+'-val');
+    if(input && out) out.textContent=input.value;
+  });
+}
+function calculateReadiness(){
+  updateSliderLabels();
+  const energy=+document.getElementById('energy').value;
+  const soreness=+document.getElementById('soreness').value;
+  const sleep=+document.getElementById('sleep').value;
+  const score=Math.max(1, Math.min(10, Math.round((energy*0.45)+(sleep*0.35)+((11-soreness)*0.20))));
+  let note='Train normally. Push progression only if warmups feel clean.';
+  if(score<=4) note='Reduce load or volume today. Prioritize form, mobility, and recovery.';
+  else if(score>=8) note='Good day to push a top set or add one small progression.';
+  document.getElementById('readiness-score').textContent=score + '/10';
+  document.getElementById('readiness-note').textContent=note;
+  document.getElementById('readiness-detail').textContent='Saved locally. ' + note;
+  const payload={energy,soreness,sleep,score,note,date:new Date().toISOString()};
+  saveLocal('readiness', payload); trySync('readiness', payload);
+}
+
+function renderGoal(){
+  const goal=readLocal('goal', null);
+  document.getElementById('goal-output').innerHTML = goal ? `<strong>${goal.name}</strong><br><span>${goal.deadline || 'No deadline'} · ${goal.actions || 'No actions listed yet.'}</span>` : 'No goal saved yet.';
+}
+function renderLogs(){
+  const logs=readLocal('logs', []);
+  document.getElementById('log-output').innerHTML = logs.length ? logs.slice(-3).reverse().map(l=>`<strong>${l.type}: ${l.lift || 'Session'}</strong><br><span>${l.topset || 'No top set'} · ${l.notes || 'No notes'} · ${new Date(l.date).toLocaleDateString()}</span>`).join('<hr>') : 'No logs yet.';
+}
+function wireForms(){
+  ['energy','soreness','sleep'].forEach(id=>document.getElementById(id).addEventListener('input', updateSliderLabels));
+  document.getElementById('goal-form').addEventListener('submit', e=>{ e.preventDefault(); const payload={name:clean(document.getElementById('goal-name').value),deadline:document.getElementById('goal-deadline').value,actions:clean(document.getElementById('goal-actions').value),date:new Date().toISOString()}; saveLocal('goal',payload); renderGoal(); trySync('goal',payload); });
+  document.getElementById('log-form').addEventListener('submit', e=>{ e.preventDefault(); const logs=readLocal('logs',[]); const payload={type:document.getElementById('log-type').value,lift:clean(document.getElementById('log-lift').value),topset:clean(document.getElementById('log-topset').value),notes:clean(document.getElementById('log-notes').value),date:new Date().toISOString()}; logs.push(payload); saveLocal('logs',logs); renderLogs(); trySync('workout_log',payload); e.target.reset(); });
+  document.getElementById('plateau-form').addEventListener('submit', e=>{ e.preventDefault(); const type=document.getElementById('plateau-type').value; const tips={strength:'Hold form standard, add one back-off set, and only increase load after hitting the top rep range twice.', fatigue:'Cut volume by 20–30% for one week, keep protein/carbs steady, and protect sleep.', pump:'Lower the load, slow the eccentric, pause at peak contraction, and stop letting secondary muscles take over.', consistency:'Shrink the minimum: commit to 35-minute sessions and keep the split alive instead of restarting.'}; const payload={type,time:document.getElementById('plateau-time').value,tip:tips[type]}; document.getElementById('plateau-output').innerHTML=`<strong>Adjustment:</strong><br><span>${tips[type]}</span>`; trySync('plateau',payload); });
+  document.getElementById('swap-form').addEventListener('submit', e=>{ e.preventDefault(); const swaps={'Barbell Bench Press':'Dumbbell bench press, machine chest press, or weighted push-up. Keep horizontal press pattern.','Back Squat':'Hack squat, leg press, goblet squat, or split squat. Keep quad/glute load.','Barbell Row':'Chest-supported row, cable row, or dumbbell row. Keep horizontal pull.','Lat Pulldown':'Assisted pull-up, single-arm cable pulldown, or banded pulldown. Keep vertical pull.','Romanian Deadlift':'Dumbbell RDL, hip thrust, back extension, or cable pull-through. Keep hip hinge.','Overhead Press':'Seated dumbbell press, machine shoulder press, or landmine press. Keep vertical press.'}; const exercise=document.getElementById('swap-exercise').value; const payload={exercise,reason:document.getElementById('swap-reason').value,swap:swaps[exercise]}; document.getElementById('swap-output').innerHTML=`<strong>${exercise}</strong><br><span>${swaps[exercise]}</span>`; trySync('swap',payload); });
+  document.getElementById('weekly-form').addEventListener('submit', e=>{ e.preventDefault(); const payload={wins:clean(document.getElementById('weekly-wins').value),stuck:clean(document.getElementById('weekly-stuck').value),date:new Date().toISOString()}; saveLocal('weekly',payload); document.getElementById('weekly-output').innerHTML=`<strong>Saved check-in:</strong><br><span>Wins: ${payload.wins || '—'}<br>Stuck: ${payload.stuck || '—'}</span>`; trySync('weekly_checkin',payload); });
+}
+
+(async()=>{
+  try{
+    const session = await ngmUpdateNav();
+    if(!session){ window.location.href='/login'; return; }
+    premiumUser=session.user;
+    const {data:profile,error}=await sb.from('profiles').select('role,subscription').eq('id',session.user.id).single();
+    if(error) throw error;
+    const isPremium = profile?.subscription === 'premium' || profile?.role === 'admin';
+    document.getElementById('premium-status').style.display='none';
+    if(!isPremium){ document.getElementById('premium-lock').style.display='block'; return; }
+    document.getElementById('premium-app').style.display='block';
+    wireForms(); updateSliderLabels(); renderGoal(); renderLogs();
+    const saved=readLocal('readiness', null); if(saved){ document.getElementById('readiness-score').textContent=saved.score + '/10'; document.getElementById('readiness-note').textContent=saved.note; }
+  }catch(err){
+    document.getElementById('premium-status').textContent = 'Could not verify premium access: ' + (err.message || 'Supabase connection failed.');
+  }
+})();
+</script>
+</body>
+</html>

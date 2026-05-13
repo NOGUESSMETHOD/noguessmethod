@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NoGuessMethod | Admin</title>
+<link rel="stylesheet" href="/assets/style.css">
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+</head>
+<body>
+
+<header class="site-header">
+  <a href="/" class="brand" aria-label="NoGuessMethod home">
+    <img src="/assets/ngm-logo-square.jpeg" alt="NGM" class="logo-square">
+  </a>
+  <nav class="nav">
+    <a href="/">Main</a>
+    <a href="/free">Free Board</a>
+    <a href="/signup" data-auth="logged-out">Sign Up</a>
+    <a href="/login" class="primary" data-auth="logged-out">Login</a>
+    <a href="/workout" data-auth="logged-in">Today's Workout</a>
+    <a href="/premium" data-auth="logged-in">Premium</a>
+    <a href="/account" data-auth="logged-in" class="primary">Member Hub</a>
+    <button type="button" class="logout-button auth-nav-hidden" data-auth="logged-in" data-logout>Log Out</button>
+  </nav>
+</header>
+
+<div class="admin-wrap" id="admin-wrap" style="display:none">
+
+  <!-- Header row -->
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
+    <div>
+      <div class="eyebrow">Admin Dashboard</div>
+      <h2 style="margin:6px 0 0">Control Panel.</h2>
+    </div>
+    <button class="btn" id="refresh-btn" onclick="loadData()">Refresh</button>
+  </div>
+
+  <!-- Stats bar -->
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-num" id="stat-members">—</div>
+      <div class="stat-lbl">Total Members</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="stat-premium">—</div>
+      <div class="stat-lbl">Premium</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="stat-posts">—</div>
+      <div class="stat-lbl">Free Board Posts</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="stat-waitlist">—</div>
+      <div class="stat-lbl">Waitlist Signups</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="admin-tabs">
+    <button class="tab-btn active" onclick="switchTab('members', this)">Members</button>
+    <button class="tab-btn" onclick="switchTab('posts', this)">Free Board</button>
+    <button class="tab-btn" onclick="switchTab('waitlist', this)">Waitlist</button>
+  </div>
+
+  <!-- Members panel -->
+  <div class="admin-panel visible" id="panel-members">
+    <div class="admin-section">
+      <div class="admin-section-head">
+        <h3>All Members</h3>
+        <input id="member-search" placeholder="Search email or username..." style="background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:12px;padding:8px 14px;color:#fff;font-size:13px;width:220px">
+      </div>
+      <div id="members-body">
+        <div class="admin-loading">Loading members...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Free Board panel -->
+  <div class="admin-panel" id="panel-posts">
+    <div class="admin-section">
+      <div class="admin-section-head">
+        <h3>Free Board Submissions</h3>
+      </div>
+      <div id="posts-body">
+        <div class="admin-loading">Loading posts...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Waitlist panel -->
+  <div class="admin-panel" id="panel-waitlist">
+    <div class="admin-section">
+      <div class="admin-section-head">
+        <h3>Waitlist Signups</h3>
+      </div>
+      <div id="waitlist-body">
+        <div class="admin-loading">Loading waitlist...</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p class="admin-loading" id="admin-loading">Checking authorization...</p>
+
+<footer class="footer">
+  <span>NoGuessMethod</span>
+  <span><a href="/">Main</a> · <a href="/free">Free Board</a> · <a href="/investors">Investors</a></span>
+  <span>© 2026 NoGuessMethod</span>
+</footer>
+
+<script src="/assets/supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+function ngmClient(){
+  return window.supabase.createClient(window.NGM_SUPABASE_URL, window.NGM_SUPABASE_ANON_KEY);
+}
+async function ngmUpdateNav(){
+  const sb = ngmClient();
+  const {data:{session}} = await sb.auth.getSession();
+  document.querySelectorAll('[data-auth="logged-out"]').forEach(el=>{
+    session ? el.classList.add("auth-nav-hidden") : el.classList.remove("auth-nav-hidden");
+  });
+  document.querySelectorAll('[data-auth="logged-in"]').forEach(el=>{
+    session ? el.classList.remove("auth-nav-hidden") : el.classList.add("auth-nav-hidden");
+  });
+  document.querySelectorAll('[data-logout]').forEach(btn=>{
+    btn.onclick = async ()=>{ await sb.auth.signOut(); window.location.href="/"; };
+  });
+}
+
+let cachedToken = null;
+let allMembers  = [];
+
+function fmt(dateStr){
+  if(!dateStr) return '—';
+  return new Date(dateStr).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+
+function switchTab(name, btn){
+  document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('visible'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('visible');
+  btn.classList.add('active');
+}
+
+async function setSub(targetId, subscription, btn){
+  btn.disabled = true;
+  btn.textContent = '...';
+  try{
+    const res = await fetch('/api/admin-set-subscription',{
+      method: 'POST',
+      headers:{ 'Authorization': `Bearer ${cachedToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetId, subscription }),
+    });
+    const data = await res.json();
+    if(!data.ok) throw new Error(data.error || 'Failed');
+    // Update local data and re-render
+    const member = allMembers.find(m => m.id === targetId);
+    if(member) member.subscription = subscription;
+    renderMembers(allMembers);
+    updateStats();
+  }catch(err){
+    btn.disabled = false;
+    btn.textContent = subscription === 'premium' ? 'Make Premium' : 'Revoke';
+    alert(err.message);
+  }
+}
+
+function renderMembers(members){
+  const search = document.getElementById('member-search').value.toLowerCase();
+  const filtered = search
+    ? members.filter(m =>
+        m.email.toLowerCase().includes(search) ||
+        m.username.toLowerCase().includes(search)
+      )
+    : members;
+
+  if(!filtered.length){
+    document.getElementById('members-body').innerHTML =
+      `<div class="empty-row">${search ? 'No members match that search.' : 'No members yet.'}</div>`;
+    return;
+  }
+
+  const rows = filtered.map(m => {
+    const isPremium = m.subscription === 'premium';
+    const isAdmin   = m.role === 'admin';
+    const subBadge  = isPremium
+      ? `<span class="badge badge-premium">Premium</span>`
+      : `<span class="badge badge-free">Free</span>`;
+    const roleBadge = isAdmin
+      ? `<span class="badge badge-admin" style="margin-left:6px">Admin</span>`
+      : '';
+    const action = isAdmin
+      ? `<span style="color:var(--soft);font-size:12px">Admin</span>`
+      : isPremium
+        ? `<button class="tbl-btn danger" onclick="setSub('${m.id}','free',this)">Revoke</button>`
+        : `<button class="tbl-btn" onclick="setSub('${m.id}','premium',this)">Make Premium</button>`;
+    return `<tr>
+      <td>${m.email}</td>
+      <td>${m.username}</td>
+      <td>${subBadge}${roleBadge}</td>
+      <td>${m.training_level}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.goal}</td>
+      <td style="white-space:nowrap">${fmt(m.created_at)}</td>
+      <td>${action}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('members-body').innerHTML =
+    `<table class="admin-tbl">
+      <thead><tr>
+        <th>Email</th><th>Username</th><th>Status</th>
+        <th>Level</th><th>Goal</th><th>Joined</th><th>Action</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function renderPosts(posts){
+  if(!posts.length){
+    document.getElementById('posts-body').innerHTML = '<div class="empty-row">No posts yet.</div>';
+    return;
+  }
+  const rows = posts.map(p => `<tr>
+    <td style="white-space:nowrap">${fmt(p.created_at)}</td>
+    <td>${p.name || '—'}</td>
+    <td>${p.email || '—'}</td>
+    <td><span class="badge badge-free">${p.board || '—'}</span></td>
+    <td class="msg-cell" title="${(p.message||'').replace(/"/g,'&quot;')}">${p.message || '—'}</td>
+    <td><span class="badge ${p.status==='resolved' ? 'badge-premium' : 'badge-free'}">${p.status || 'pending'}</span></td>
+  </tr>`).join('');
+
+  document.getElementById('posts-body').innerHTML =
+    `<table class="admin-tbl">
+      <thead><tr>
+        <th>Date</th><th>Name</th><th>Email</th><th>Board</th><th>Message</th><th>Status</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function renderWaitlist(beta){
+  if(!beta.length){
+    document.getElementById('waitlist-body').innerHTML = '<div class="empty-row">No signups yet.</div>';
+    return;
+  }
+  const rows = beta.map(b => `<tr>
+    <td style="white-space:nowrap">${fmt(b.created_at)}</td>
+    <td>${b.name || '—'}</td>
+    <td>${b.email || '—'}</td>
+    <td>${b.training_level || '—'}</td>
+    <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.goal || '—'}</td>
+  </tr>`).join('');
+
+  document.getElementById('waitlist-body').innerHTML =
+    `<table class="admin-tbl">
+      <thead><tr>
+        <th>Date</th><th>Name</th><th>Email</th><th>Level</th><th>Goal</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function updateStats(){
+  document.getElementById('stat-premium').textContent =
+    allMembers.filter(m => m.subscription === 'premium').length;
+}
+
+async function loadData(){
+  const btn = document.getElementById('refresh-btn');
+  btn.textContent = 'Loading...';
+  btn.disabled = true;
+  try{
+    const res = await fetch('/api/admin-data',{
+      headers:{ 'Authorization': `Bearer ${cachedToken}` }
+    });
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+
+    allMembers = data.members;
+    document.getElementById('stat-members').textContent  = data.members.length;
+    document.getElementById('stat-premium').textContent  = data.members.filter(m => m.subscription === 'premium').length;
+    document.getElementById('stat-posts').textContent    = data.posts.length;
+    document.getElementById('stat-waitlist').textContent = data.beta.length;
+
+    renderMembers(data.members);
+    renderPosts(data.posts);
+    renderWaitlist(data.beta);
+  }catch(err){
+    document.getElementById('members-body').innerHTML =
+      `<div class="empty-row">Error: ${err.message}</div>`;
+  }finally{
+    btn.textContent = 'Refresh';
+    btn.disabled = false;
+  }
+}
+
+(async()=>{
+  try{
+    const sb = ngmClient();
+    const {data:{session}} = await sb.auth.getSession();
+    if(!session){ window.location.href="/login"; return; }
+
+    const {data:profile} = await sb.from("profiles").select("role").eq("id",session.user.id).single();
+    if(profile?.role !== 'admin'){
+      document.getElementById('admin-loading').textContent = 'Access denied. Admin only.';
+      return;
+    }
+
+    cachedToken = session.access_token;
+
+    document.getElementById('admin-loading').style.display = 'none';
+    document.getElementById('admin-wrap').style.display = '';
+
+    // Search filter
+    document.getElementById('member-search').addEventListener('input', () => {
+      renderMembers(allMembers);
+    });
+
+    await loadData();
+    ngmUpdateNav();
+  }catch(err){
+    document.getElementById('admin-loading').textContent = err.message || 'Admin load failed.';
+  }
+})();
+</script>
+</body>
+</html>
