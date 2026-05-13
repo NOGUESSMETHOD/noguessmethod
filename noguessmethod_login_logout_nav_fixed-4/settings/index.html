@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NoGuessMethod | Settings</title>
+<link rel="stylesheet" href="/assets/style.css">
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+</head>
+<body>
+
+<header class="site-header">
+  <a href="/" class="brand" aria-label="NoGuessMethod home">
+    <img src="/assets/ngm-logo-square.jpeg" alt="NGM" class="logo-square">
+  </a>
+  <nav class="nav">
+    <a href="/">Main</a>
+    <a href="/free">Free Board</a>
+    <a href="/signup" data-auth="logged-out">Sign Up</a>
+    <a href="/login" class="primary" data-auth="logged-out">Login</a>
+    <a href="/workout" data-auth="logged-in">Today's Workout</a>
+    <a href="/account" data-auth="logged-in" class="primary">Member Hub</a>
+    <button type="button" class="logout-button auth-nav-hidden" data-auth="logged-in" data-logout>Log Out</button>
+  </nav>
+</header>
+
+<main class="settings-wrap" id="settings-main" style="display:none">
+
+  <!-- Left: forms -->
+  <div class="card settings-panel">
+    <div class="eyebrow">Settings</div>
+    <img class="auth-logo" src="/assets/ngm-logo-square.jpeg" alt="NGM">
+    <h2>Your Profile.</h2>
+
+    <!-- Profile section -->
+    <div class="settings-section">
+      <div class="settings-label">Profile</div>
+      <div class="settings-row">
+        <label>Username<input id="s-username" placeholder="Username"></label>
+      </div>
+      <button class="btn primary" id="save-profile-btn" type="button" onclick="saveProfile()">Save Profile</button>
+      <p class="settings-status" id="profile-status"></p>
+    </div>
+
+    <!-- Training section -->
+    <div class="settings-section">
+      <div class="settings-label">Training</div>
+      <div class="settings-row">
+        <label>Training Level
+          <select id="s-level">
+            <option value="">Select one</option>
+            <option value="Beginner">Beginner</option>
+            <option value="Intermediate">Intermediate</option>
+            <option value="Advanced">Advanced</option>
+          </select>
+        </label>
+        <label>Main Goal<input id="s-goal" placeholder="Strength, plateau break, consistency..."></label>
+      </div>
+      <button class="btn primary" id="save-training-btn" type="button" onclick="saveTraining()">Save Training</button>
+      <p class="settings-status" id="training-status"></p>
+    </div>
+
+    <!-- Preferences section -->
+    <div class="settings-section">
+      <div class="settings-label">Reminders</div>
+      <div class="settings-row">
+        <label>Phone Number for SMS
+          <input id="s-phone" type="tel" placeholder="+1 212 555 0123">
+        </label>
+        <label style="font-size:13px;font-weight:400;color:var(--muted)">
+          International format required (e.g. +1 for US). Leave blank to opt out of SMS.
+        </label>
+        <label>Preferred Workout Time
+          <select id="s-time">
+            <option value="">No preference — skip SMS</option>
+            <option value="early_morning">Early Morning (5–7am ET)</option>
+            <option value="morning">Morning (7–10am ET)</option>
+            <option value="midday">Midday (10am–1pm ET)</option>
+            <option value="afternoon">Afternoon (1–5pm ET)</option>
+            <option value="evening">Evening (5–8pm ET)</option>
+            <option value="night">Night (8pm+ ET)</option>
+          </select>
+        </label>
+      </div>
+      <button class="btn primary" id="save-prefs-btn" type="button" onclick="savePrefs()">Save Reminder Settings</button>
+      <p class="settings-status" id="prefs-status"></p>
+    </div>
+
+    <!-- Password section -->
+    <div class="settings-section">
+      <div class="settings-label">Change Password</div>
+      <div class="settings-row">
+        <label>New Password<input id="s-password" type="password" placeholder="New password"></label>
+        <label>Confirm Password<input id="s-confirm" type="password" placeholder="Confirm new password"></label>
+      </div>
+      <button class="btn" id="save-pw-btn" type="button" onclick="savePassword()">Update Password</button>
+      <p class="settings-status" id="pw-status"></p>
+    </div>
+
+  </div>
+
+  <!-- Right: account summary -->
+  <div class="card summary-card">
+    <div class="eyebrow">Account</div>
+    <h2 style="font-size:clamp(28px,4vw,42px)">Quick View.</h2>
+
+    <div class="summary-list">
+      <div class="summary-row"><b>Email</b><span id="sum-email">—</span></div>
+      <div class="summary-row"><b>Username</b><span id="sum-username">—</span></div>
+      <div class="summary-row"><b>Member Since</b><span id="sum-since">—</span></div>
+      <div class="summary-row"><b>Subscription</b><span id="sum-sub">—</span></div>
+      <div class="summary-row"><b>Training Level</b><span id="sum-level">—</span></div>
+      <div class="summary-row"><b>Goal</b><span id="sum-goal">—</span></div>
+      <div class="summary-row"><b>Workout Time</b><span id="sum-time">—</span></div>
+      <div class="summary-row"><b>SMS</b><span id="sum-phone">—</span></div>
+    </div>
+
+    <div class="actions" style="margin-top:22px;flex-direction:column">
+      <a class="btn primary" href="/workout">Today's Workout</a>
+      <a class="btn" href="/account">Member Hub</a>
+      <a class="btn" href="/upgrade" id="sum-upgrade-link" style="display:none">Upgrade — $19.99/mo</a>
+    </div>
+  </div>
+
+</main>
+
+<p id="settings-loading" style="padding:80px 0;text-align:center;color:var(--muted)">Loading your profile...</p>
+
+<footer class="footer">
+  <span>NoGuessMethod</span>
+  <span><a href="/">Main</a> · <a href="/free">Free Board</a> · <a href="/investors">Investors</a></span>
+  <span>© 2026 NoGuessMethod</span>
+</footer>
+
+<script src="/assets/supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+function ngmClient(){
+  return window.supabase.createClient(window.NGM_SUPABASE_URL, window.NGM_SUPABASE_ANON_KEY);
+}
+async function ngmUpdateNav(){
+  const sb = ngmClient();
+  const {data:{session}} = await sb.auth.getSession();
+  document.querySelectorAll('[data-auth="logged-out"]').forEach(el=>{
+    session ? el.classList.add("auth-nav-hidden") : el.classList.remove("auth-nav-hidden");
+  });
+  document.querySelectorAll('[data-auth="logged-in"]').forEach(el=>{
+    session ? el.classList.remove("auth-nav-hidden") : el.classList.add("auth-nav-hidden");
+  });
+  document.querySelectorAll('[data-logout]').forEach(btn=>{
+    btn.onclick = async ()=>{ await sb.auth.signOut(); window.location.href="/"; };
+  });
+}
+
+const TIME_LABELS = {
+  early_morning: 'Early Morning (5–7am)',
+  morning: 'Morning (7–10am)',
+  midday: 'Midday (10am–1pm)',
+  afternoon: 'Afternoon (1–5pm)',
+  evening: 'Evening (5–8pm)',
+  night: 'Night (8pm+)',
+};
+
+let currentUserId = null;
+
+function setStatus(id, msg, isOk){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.textContent = msg;
+  el.className = 'settings-status' + (isOk === true ? ' ok' : isOk === false ? ' err' : '');
+}
+
+function syncSummary(){
+  document.getElementById("sum-username").textContent  = document.getElementById("s-username").value  || '—';
+  document.getElementById("sum-level").textContent     = document.getElementById("s-level").value     || '—';
+  document.getElementById("sum-goal").textContent      = document.getElementById("s-goal").value      || '—';
+  const timeVal = document.getElementById("s-time").value;
+  document.getElementById("sum-time").textContent = timeVal ? TIME_LABELS[timeVal] : '—';
+}
+
+async function saveProfile(){
+  const btn = document.getElementById("save-profile-btn");
+  btn.disabled = true; btn.textContent = "Saving...";
+  const username = document.getElementById("s-username").value.trim();
+  if(!username){ setStatus("profile-status","Username cannot be empty.", false); btn.disabled=false; btn.textContent="Save Profile"; return; }
+  try{
+    const sb = ngmClient();
+    const {error} = await sb.from("profiles").update({ username }).eq("id", currentUserId);
+    if(error) throw error;
+    setStatus("profile-status", "Profile saved.", true);
+    document.getElementById("sum-username").textContent = username;
+  }catch(err){ setStatus("profile-status", err.message, false); }
+  finally{ btn.disabled=false; btn.textContent="Save Profile"; }
+}
+
+async function saveTraining(){
+  const btn = document.getElementById("save-training-btn");
+  btn.disabled=true; btn.textContent="Saving...";
+  const training_level = document.getElementById("s-level").value;
+  const goal = document.getElementById("s-goal").value.trim();
+  try{
+    const sb = ngmClient();
+    const {error} = await sb.from("profiles").update({ training_level, goal }).eq("id", currentUserId);
+    if(error) throw error;
+    setStatus("training-status", "Training saved.", true);
+    document.getElementById("sum-level").textContent = training_level || '—';
+    document.getElementById("sum-goal").textContent  = goal || '—';
+  }catch(err){ setStatus("training-status", err.message, false); }
+  finally{ btn.disabled=false; btn.textContent="Save Training"; }
+}
+
+async function savePrefs(){
+  const btn = document.getElementById("save-prefs-btn");
+  btn.disabled=true; btn.textContent="Saving...";
+  const preferred_time = document.getElementById("s-time").value;
+  const phone_number   = document.getElementById("s-phone").value.trim();
+  if(phone_number && !/^\+[1-9]\d{6,14}$/.test(phone_number)){
+    setStatus("prefs-status","Phone must be in international format: +1 212 555 0123", false);
+    btn.disabled=false; btn.textContent="Save Reminder Settings"; return;
+  }
+  try{
+    const sb = ngmClient();
+    const {error} = await sb.from("profiles").update({
+      preferred_time,
+      phone_number: phone_number || null,
+    }).eq("id", currentUserId);
+    if(error) throw error;
+    setStatus("prefs-status", "Reminder settings saved.", true);
+    document.getElementById("sum-time").textContent  = preferred_time ? TIME_LABELS[preferred_time] : '—';
+    document.getElementById("sum-phone").textContent = phone_number || 'Not set';
+  }catch(err){ setStatus("prefs-status", err.message, false); }
+  finally{ btn.disabled=false; btn.textContent="Save Reminder Settings"; }
+}
+
+async function savePassword(){
+  const btn = document.getElementById("save-pw-btn");
+  const pw  = document.getElementById("s-password").value;
+  const cfm = document.getElementById("s-confirm").value;
+  if(!pw){ setStatus("pw-status","Enter a new password.", false); return; }
+  if(pw !== cfm){ setStatus("pw-status","Passwords do not match.", false); return; }
+  if(pw.length < 8){ setStatus("pw-status","Password must be at least 8 characters.", false); return; }
+  btn.disabled=true; btn.textContent="Updating...";
+  try{
+    const sb = ngmClient();
+    const {error} = await sb.auth.updateUser({ password: pw });
+    if(error) throw error;
+    setStatus("pw-status","Password updated.", true);
+    document.getElementById("s-password").value = "";
+    document.getElementById("s-confirm").value  = "";
+  }catch(err){ setStatus("pw-status", err.message, false); }
+  finally{ btn.disabled=false; btn.textContent="Update Password"; }
+}
+
+(async()=>{
+  try{
+    const sb = ngmClient();
+    const {data:{session}} = await sb.auth.getSession();
+    if(!session){ window.location.href="/login"; return; }
+
+    currentUserId = session.user.id;
+
+    const {data:profile, error} = await sb
+      .from("profiles")
+      .select("username, role, subscription, training_level, goal, preferred_time, phone_number")
+      .eq("id", currentUserId)
+      .single();
+
+    if(error) throw error;
+
+    const isPremium = profile?.subscription === 'premium' || profile?.role === 'admin';
+
+    // Populate form fields
+    document.getElementById("s-username").value = profile?.username || "";
+    document.getElementById("s-level").value    = profile?.training_level || "";
+    document.getElementById("s-goal").value     = profile?.goal || "";
+    document.getElementById("s-time").value     = profile?.preferred_time || "";
+    document.getElementById("s-phone").value    = profile?.phone_number || "";
+
+    // Populate summary
+    document.getElementById("sum-email").textContent   = session.user.email;
+    document.getElementById("sum-username").textContent = profile?.username || '—';
+    document.getElementById("sum-since").textContent   = new Date(session.user.created_at).toLocaleDateString();
+    document.getElementById("sum-sub").textContent     = isPremium ? "Premium" : "Free";
+    document.getElementById("sum-level").textContent   = profile?.training_level || '—';
+    document.getElementById("sum-goal").textContent    = profile?.goal || '—';
+    const t = profile?.preferred_time;
+    document.getElementById("sum-time").textContent  = t ? TIME_LABELS[t] : '—';
+    document.getElementById("sum-phone").textContent = profile?.phone_number || 'Not set';
+
+    if(!isPremium) document.getElementById("sum-upgrade-link").style.display = "";
+
+    document.getElementById("settings-loading").style.display = "none";
+    document.getElementById("settings-main").style.display = "";
+
+    ngmUpdateNav();
+  }catch(err){
+    document.getElementById("settings-loading").textContent = err.message || "Could not load settings.";
+  }
+})();
+</script>
+</body>
+</html>
