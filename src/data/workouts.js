@@ -113,12 +113,7 @@ export const WORKOUTS = {
   },
 }
 
-export const SCHEDULE = [
-  'push-a','pull-a','legs-a','core','push-b','pull-b','legs-b','recovery',
-  'push-a','pull-a','legs-a','core','push-b','pull-b','legs-b','recovery',
-  'push-a','pull-a','legs-a','core','push-b','pull-b','legs-b','recovery',
-  'push-a','pull-a','legs-a','core','push-b','pull-b',
-]
+export { default as SCHEDULE } from './schedule.json'
 
 export function getTodayIndex() {
   return Math.floor(Date.now() / 86400000) % SCHEDULE.length

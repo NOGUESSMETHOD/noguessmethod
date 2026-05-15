@@ -11,13 +11,7 @@ const TIME_TO_UTC_HOUR = {
   night:          1,  // 8pm ET
 };
 
-// 30-day rotating schedule (same logic as the workout page)
-const SCHEDULE = [
-  'push-a','pull-a','legs-a','core','push-b','pull-b','legs-b','recovery',
-  'push-a','pull-a','legs-a','core','push-b','pull-b','legs-b','recovery',
-  'push-a','pull-a','legs-a','core','push-b','pull-b','legs-b','recovery',
-  'push-a','pull-a','legs-a','core','push-b','pull-b',
-];
+const SCHEDULE = require('../../src/data/schedule.json');
 
 const WORKOUT_INFO = {
   'push-a':    { label: 'Push Day A',          focus: 'Chest · Shoulders · Triceps',        exercises: 6 },
@@ -48,6 +42,15 @@ function buildMessage(workout, username) {
 }
 
 exports.handler = async (event) => {
+  // If CRON_SECRET is set in env, require it via x-cron-secret header.
+  // Note: Netlify's built-in scheduler cannot send custom headers, so to use
+  // this protection you must trigger the function from an external cron service
+  // (e.g. GitHub Actions, cron-job.org) that can include the header.
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret && event.headers['x-cron-secret'] !== cronSecret) {
+    return { statusCode: 403, body: JSON.stringify({ error: 'Forbidden' }) };
+  }
+
   const currentHour = new Date().getUTCHours();
 
   const sb = createClient(
