@@ -63,10 +63,10 @@ export default function Header() {
 
       {/* Mobile nav overlay */}
       <div className={`mobile-nav${open ? ' open' : ''}`} aria-hidden={!open}>
-        <nav onClick={() => setOpen(false)}>
-          {navLinks}
-        </nav>
-      </div>
+  <nav className="mobile-nav-links" onClick={() => setOpen(false)}>
+    {navLinks}
+  </nav>
+</div>
     </header>
   )
 }
