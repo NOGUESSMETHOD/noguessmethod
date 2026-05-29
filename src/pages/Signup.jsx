@@ -47,4 +47,24 @@ export default function Signup() {
         <section className="card auth-panel">
           <div className="eyebrow">Create Account</div>
           <img className="auth-logo" src="/assets/ngm-logo-square.jpeg" alt="NGM" />
-          <h2>Create Account</h
+          <h2>Create Account</h2>
+          <p>Create your NoGuessMethod account and access the member hub.</p>
+          <form className="form" onSubmit={handleSubmit}>
+            <label>Username<input value={username} onChange={e => setUsername(e.target.value)} placeholder="Username" required /></label>
+            <label>Email<input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="you@example.com" required /></label>
+            <label>Password<input value={password} onChange={e => setPassword(e.target.value)} type="password" placeholder="Password" required /></label>
+            <label>Confirm Password<input value={confirm} onChange={e => setConfirm(e.target.value)} type="password" placeholder="Confirm password" required /></label>
+            <button className="primary" type="submit" disabled={loading}>{loading ? 'Creating...' : 'Create Account'}</button>
+          </form>
+          <p className="status">Already have an account? <Link to="/login">Login</Link></p>
+          {status && <div className="status">{status}</div>}
+        </section>
+        <section className="card logo-stage">
+          <img src="/assets/ngm-logo-banner.jpeg" alt="NoGuessMethod" />
+        </section>
+      </main>
+      <Footer />
+    </PageTransition>
+  )
+}
+
