@@ -68,3 +68,7 @@ export default function Signup() {
   )
 }
 
+// Temporary test - remove after debugging
+fetch('https://ifimawfcqooucjktmcop.supabase.co/rest/v1/')
+  .then(r => console.log('Supabase reachable:', r.status))
+  .catch(e => console.error('Supabase unreachable:', e.message))
