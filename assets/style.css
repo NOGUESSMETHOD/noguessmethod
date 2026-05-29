@@ -185,6 +185,13 @@ button:disabled{opacity:.4;cursor:default;transform:none!important}
   gap:20px;
   width:100%;
 }
+.mobile-nav-links{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:12px;
+  width:100%;
+}
 
 /* ── Layout ── */
 .wrap{
