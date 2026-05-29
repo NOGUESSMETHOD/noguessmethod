@@ -54,6 +54,7 @@ exports.handler = async (event) => {
   }
 
   try {
+    console.log('Price ID:', process.env.STRIPE_PRICE_ID);
     const session = await stripe.checkout.sessions.create(sessionParams);
     return {
       statusCode: 200,
