@@ -38,6 +38,10 @@ export default function Signup() {
       setLoading(false)
     }
   }
+} catch (err) {
+  console.error('Signup error:', err)
+  setStatus(err.message || JSON.stringify(err) || 'Signup failed.')
+}
 
   return (
     <PageTransition>
