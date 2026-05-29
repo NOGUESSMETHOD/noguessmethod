@@ -27,10 +27,7 @@ export default function Signup() {
       },
     })
     if (error) throw error
-    if (data.user) {
-      const { error: profileError } = await supabase.from('profiles').insert({ id: data.user.id, username, role: 'member' })
-      if (profileError) throw new Error('Profile error: ' + profileError.message)
-    }
+
     setStatus('Account created. Check your email if confirmation is required.')
   } catch (err) {
     console.error('Signup error:', err)
