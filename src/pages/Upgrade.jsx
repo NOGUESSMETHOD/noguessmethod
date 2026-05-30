@@ -29,28 +29,11 @@ const upgradeStyles = `
 export default function Upgrade() {
   const { session } = useAuth()
   const navigate = useNavigate()
-  const [checkoutStatus, setCheckoutStatus] = useState('')
-  const [checkoutLoading, setCheckoutLoading] = useState(false)
+const startCheckout = () => {
+  if (!session) { navigate('/login'); return }
+  navigate('/checkout')
+}
 
-  const startCheckout = async () => {
-    if (!session) { navigate('/login'); return }
-    setCheckoutLoading(true)
-    setCheckoutStatus('')
-    try {
-      const res = await fetch('/api/create-checkout', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-      })
-      const data = await res.json()
-      if (data.url) { window.location.href = data.url }
-      else if (data.error === 'Already subscribed') { setCheckoutStatus('You already have an active Premium subscription.') }
-      else throw new Error(data.error || 'Could not create checkout session.')
-    } catch (err) {
-      setCheckoutStatus(err.message)
-    } finally {
-      setCheckoutLoading(false)
-    }
-  }
 
   return (
     <PageTransition>
@@ -103,10 +86,9 @@ export default function Upgrade() {
               <div className="pricing-feature active"><span className="check on">✓</span>Support NGM development</div>
             </div>
             <div className="pricing-action">
-              <button className="btn primary" style={{ width: '100%', display: 'flex' }} onClick={startCheckout} disabled={checkoutLoading}>
-                {checkoutLoading ? 'Redirecting to Stripe...' : 'Upgrade — $19.99/mo'}
-              </button>
-              {checkoutStatus && <p className="checkout-status">{checkoutStatus}</p>}
+<button className="btn primary" style={{ width: '100%', display: 'flex' }} onClick={startCheckout}>
+  Upgrade — $19.99/mo
+</button>
             </div>
           </div>
         </div>
