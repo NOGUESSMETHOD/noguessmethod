@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
@@ -6,6 +6,189 @@ import PageTransition from '../components/PageTransition'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { WORKOUTS, SCHEDULE, getTodayIndex, getWeekLabel } from '../data/workouts'
+
+// ─── Log Workout Modal ────────────────────────────────────────────────────────
+
+function SetRow({ setNumber, weight, reps, onChange }) {
+  return (
+    <div className="set-row">
+      <span className="set-number">Set {setNumber}</span>
+      <label className="set-input-wrap">
+        <input
+          type="number"
+          inputMode="decimal"
+          placeholder="lbs"
+          value={weight}
+          min={0}
+          onChange={e => onChange('weight', e.target.value)}
+          className="set-input"
+        />
+        <span className="set-input-unit">lbs</span>
+      </label>
+      <span className="set-sep">×</span>
+      <label className="set-input-wrap">
+        <input
+          type="number"
+          inputMode="numeric"
+          placeholder="reps"
+          value={reps}
+          min={0}
+          onChange={e => onChange('reps', e.target.value)}
+          className="set-input"
+        />
+        <span className="set-input-unit">reps</span>
+      </label>
+    </div>
+  )
+}
+
+function LogModal({ workout, workoutKey, idx, userId, onClose, onLogged }) {
+  // Build initial state: { [exerciseName]: [{ weight: '', reps: '' }, ...] }
+  const initialSets = Object.fromEntries(
+    workout.exercises.map(ex => [
+      ex.name,
+      Array.from({ length: ex.sets }, () => ({ weight: '', reps: '' }))
+    ])
+  )
+  const [sets, setSets] = useState(initialSets)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
+  const modalRef = useRef()
+
+  // Close on backdrop click
+  function handleBackdrop(e) {
+    if (e.target === modalRef.current) onClose()
+  }
+
+  function updateSet(exerciseName, setIndex, field, value) {
+    setSets(prev => ({
+      ...prev,
+      [exerciseName]: prev[exerciseName].map((s, i) =>
+        i === setIndex ? { ...s, [field]: value } : s
+      )
+    }))
+  }
+
+  async function handleSave() {
+    setSaving(true)
+    setError(null)
+    try {
+      // 1. Insert workout_log
+      const { data: logData, error: logError } = await supabase
+        .from('workout_logs')
+        .insert({ user_id: userId, workout_key: workoutKey, day_index: idx })
+        .select('id')
+        .single()
+
+      if (logError) throw logError
+
+      const workoutLogId = logData.id
+
+      // 2. Build set_logs rows (skip empty sets)
+      const setRows = []
+      for (const ex of workout.exercises) {
+        const exSets = sets[ex.name]
+        exSets.forEach((s, i) => {
+          const repsVal = parseInt(s.reps)
+          if (!repsVal || repsVal < 1) return // skip blank sets
+          setRows.push({
+            workout_log_id: workoutLogId,
+            user_id: userId,
+            exercise_name: ex.name,
+            set_number: i + 1,
+            weight: s.weight !== '' ? parseFloat(s.weight) : null,
+            reps: repsVal,
+          })
+        })
+      }
+
+      if (setRows.length > 0) {
+        const { error: setsError } = await supabase
+          .from('set_logs')
+          .insert(setRows)
+        if (setsError) throw setsError
+      }
+
+      onLogged()
+      onClose()
+    } catch (err) {
+      setError(err.message || 'Something went wrong. Please try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="modal-backdrop" ref={modalRef} onClick={handleBackdrop}>
+      <div className="modal-sheet">
+        <div className="modal-header">
+          <div>
+            <div className="eyebrow">Log Workout</div>
+            <h3 className="modal-title">{workout.label}</h3>
+          </div>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+
+        <div className="modal-body">
+          {workout.exercises.map(ex => (
+            <div key={ex.name} className="log-exercise">
+              <div className="log-exercise-header">
+                <span className="log-exercise-name">{ex.name}</span>
+                <span className="log-exercise-meta">{ex.sets} sets · {ex.reps} reps</span>
+              </div>
+              <div className="set-rows">
+                {sets[ex.name].map((s, i) => (
+                  <SetRow
+                    key={i}
+                    setNumber={i + 1}
+                    weight={s.weight}
+                    reps={s.reps}
+                    onChange={(field, val) => updateSet(ex.name, i, field, val)}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+
+          {error && <p className="log-error">{error}</p>}
+        </div>
+
+        <div className="modal-footer">
+          <p className="log-hint">Leave weight blank for bodyweight exercises.</p>
+          <button
+            className="btn primary full-width"
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? 'Saving...' : 'Save Workout'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── PR Banner ────────────────────────────────────────────────────────────────
+
+function PRBanner({ prs }) {
+  if (!prs || prs.length === 0) return null
+  return (
+    <div className="pr-banner">
+      <span className="pr-trophy">🏆</span>
+      <div className="pr-text">
+        <strong>New PR{prs.length > 1 ? 's' : ''}!</strong>{' '}
+        {prs.map((pr, i) => (
+          <span key={i}>
+            {pr.exercise_name} — {pr.weight} lbs × {pr.reps} reps
+            {i < prs.length - 1 ? ', ' : ''}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Exercise Card ────────────────────────────────────────────────────────────
 
 function ExerciseCard({ ex, isPremium }) {
   return (
@@ -34,6 +217,8 @@ function ExerciseCard({ ex, isPremium }) {
   )
 }
 
+// ─── Nutrition Card ───────────────────────────────────────────────────────────
+
 function NutritionCard({ workout, isPremium }) {
   if (isPremium) {
     return (
@@ -60,24 +245,63 @@ function NutritionCard({ workout, isPremium }) {
   )
 }
 
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
 export default function Workout() {
   const { session } = useAuth()
-  const [isPremium, setIsPremium] = useState(false)
-  const [loaded, setLoaded] = useState(false)
+  const [isPremium, setIsPremium]   = useState(false)
+  const [joinedAt, setJoinedAt]     = useState(null)
+  const [loaded, setLoaded]         = useState(false)
+  const [showModal, setShowModal]   = useState(false)
+  const [newPRs, setNewPRs]         = useState([])
+  const [loggedToday, setLoggedToday] = useState(false)
 
   useEffect(() => {
-  if (!session) return
-  supabase.from('profiles').select('role,subscription').eq('id', session.user.id).single()
-    .then(({ data, error }) => {
-      console.log('Profile data:', data, 'Error:', error)
-      setIsPremium(data?.subscription === 'premium' || data?.role === 'admin')
-      setLoaded(true)
-    })
-}, [session])
+    if (!session) return
+    supabase
+      .from('profiles')
+      .select('role, subscription, joined_at')
+      .eq('id', session.user.id)
+      .single()
+      .then(({ data, error }) => {
+        if (error) console.error('Profile fetch error:', error)
+        setIsPremium(data?.subscription === 'premium' || data?.role === 'admin')
+        setJoinedAt(data?.joined_at ?? null)
+        setLoaded(true)
+      })
+  }, [session])
 
-  const idx = getTodayIndex()
+  // Check if already logged today
+  useEffect(() => {
+    if (!session) return
+    const today = new Date().toISOString().split('T')[0]
+    supabase
+      .from('workout_logs')
+      .select('id')
+      .eq('user_id', session.user.id)
+      .gte('logged_at', today + 'T00:00:00')
+      .lte('logged_at', today + 'T23:59:59')
+      .then(({ data }) => {
+        if (data && data.length > 0) setLoggedToday(true)
+      })
+  }, [session])
+
+  const idx        = getTodayIndex(joinedAt)
   const workoutKey = SCHEDULE[idx]
-  const workout = WORKOUTS[workoutKey]
+  const workout    = WORKOUTS[workoutKey]
+
+  // Called after a workout is saved — check for new PRs
+  async function handleLogged() {
+    setLoggedToday(true)
+    // Fetch PRs set today
+    const today = new Date().toISOString().split('T')[0]
+    const { data } = await supabase
+      .from('personal_records')
+      .select('exercise_name, weight, reps')
+      .eq('user_id', session.user.id)
+      .gte('achieved_at', today + 'T00:00:00')
+    if (data && data.length > 0) setNewPRs(data)
+  }
 
   if (!loaded) {
     return (
@@ -95,6 +319,9 @@ export default function Workout() {
     <PageTransition>
       <Header />
       <main className="workout-wrap">
+
+        {newPRs.length > 0 && <PRBanner prs={newPRs} />}
+
         <div className="card day-header">
           <div>
             <div className="eyebrow">Today's Program</div>
@@ -104,6 +331,13 @@ export default function Workout() {
               <span className="pill">Day {idx + 1} of {SCHEDULE.length} · {getWeekLabel(idx)}</span>
             </div>
           </div>
+          <button
+            className={`btn log-btn ${loggedToday ? 'logged' : 'primary'}`}
+            onClick={() => !loggedToday && setShowModal(true)}
+            disabled={loggedToday}
+          >
+            {loggedToday ? '✓ Logged' : 'Log Workout'}
+          </button>
         </div>
 
         <div className="exercise-grid">
@@ -127,6 +361,17 @@ export default function Workout() {
         )}
       </main>
       <Footer />
+
+      {showModal && (
+        <LogModal
+          workout={workout}
+          workoutKey={workoutKey}
+          idx={idx}
+          userId={session.user.id}
+          onClose={() => setShowModal(false)}
+          onLogged={handleLogged}
+        />
+      )}
     </PageTransition>
   )
 }
