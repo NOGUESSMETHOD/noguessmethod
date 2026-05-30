@@ -15,6 +15,7 @@ import Free from './pages/Free'
 import Investors from './pages/Investors'
 import NotFound from './pages/NotFound'
 import Checkout from './pages/Checkout'
+import PaidRoute from './components/PaidRoute'
 
 function AnimatedRoutes() {
   const location = useLocation()
@@ -30,7 +31,7 @@ function AnimatedRoutes() {
         <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
         <Route path="/workout" element={<ProtectedRoute><Workout /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-        <Route path="/success" element={<ProtectedRoute><Success /></ProtectedRoute>} />
+<Route path="/success" element={<ProtectedRoute><PaidRoute><Success /></PaidRoute></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
         <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
