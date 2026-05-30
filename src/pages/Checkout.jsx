@@ -5,20 +5,22 @@ import Header from '../components/Header'
 import Footer from '../components/Footer'
 import PageTransition from '../components/PageTransition'
 
+const STRIPE_PK = 'pk_live_51TU1I4CP3zZyYmuP6yz0ypeLLg6Yc6WAJNq6o1p8SpVVhKWCrBe3CzcS2ZMPswdoODSfSogROwAvspxwWJoonaHN00DGwXP4WT'
+
 export default function Checkout() {
   const { session } = useAuth()
   const navigate = useNavigate()
 
-  const [cardNumber, setCardNumber] = useState('')
-  const [expiry, setExpiry] = useState('')
-  const [cvc, setCvc] = useState('')
+  const [stripe, setStripe] = useState(null)
+  const [elements, setElements] = useState(null)
+  const [cardElement, setCardElement] = useState(null)
   const [name, setName] = useState('')
   const [promo, setPromo] = useState('')
   const [promoApplied, setPromoApplied] = useState(false)
   const [promoError, setPromoError] = useState('')
   const [promoLoading, setPromoLoading] = useState(false)
   const [discount, setDiscount] = useState(0)
-  const [promoCode, setPromoCode] = useState(null)
+  const [couponId, setCouponId] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -29,16 +31,36 @@ export default function Checkout() {
     if (!session) navigate('/login')
   }, [session])
 
-  const formatCardNumber = (val) => {
-    const digits = val.replace(/\D/g, '').slice(0, 16)
-    return digits.replace(/(.{4})/g, '$1 ').trim()
-  }
+  useEffect(() => {
+    const stripeInstance = window.Stripe(STRIPE_PK)
+    setStripe(stripeInstance)
+    const els = stripeInstance.elements()
+    setElements(els)
 
-  const formatExpiry = (val) => {
-    const digits = val.replace(/\D/g, '').slice(0, 4)
-    if (digits.length >= 3) return digits.slice(0, 2) + '/' + digits.slice(2)
-    return digits
-  }
+    const card = els.create('card', {
+      style: {
+        base: {
+          color: '#ffffff',
+          fontFamily: 'Inter, Arial, sans-serif',
+          fontSize: '16px',
+          fontWeight: '400',
+          '::placeholder': { color: 'rgba(255,255,255,0.4)' },
+          backgroundColor: 'transparent',
+        },
+        invalid: { color: '#ff6d6d' },
+      },
+    })
+
+    card.mount('#card-element')
+    setCardElement(card)
+
+    card.on('change', (e) => {
+      if (e.error) setError(e.error.message)
+      else setError('')
+    })
+
+    return () => card.unmount()
+  }, [])
 
   const applyPromo = async () => {
     if (!promo.trim()) return
@@ -56,7 +78,7 @@ export default function Checkout() {
       const data = await res.json()
       if (data.valid) {
         setDiscount(data.percentOff)
-        setPromoCode(data.couponId)
+        setCouponId(data.couponId)
         setPromoApplied(true)
       } else {
         setPromoError(data.error || 'Invalid promo code.')
@@ -69,13 +91,24 @@ export default function Checkout() {
   }
 
   const handleSubmit = async () => {
-    if (!cardNumber || !expiry || !cvc || !name) {
-      setError('Please fill in all card details.')
-      return
-    }
+    if (!name.trim()) { setError('Please enter the name on your card.'); return }
     setLoading(true)
     setError('')
+
     try {
+      // Create payment method using Stripe Elements (no raw card data sent)
+      const { paymentMethod, error: pmError } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: cardElement,
+        billing_details: { name },
+      })
+
+      if (pmError) {
+        setError(pmError.message)
+        setLoading(false)
+        return
+      }
+
       const res = await fetch('/api/create-subscription', {
         method: 'POST',
         headers: {
@@ -83,15 +116,25 @@ export default function Checkout() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          cardNumber: cardNumber.replace(/\s/g, ''),
-          expMonth: expiry.split('/')[0],
-          expYear: expiry.split('/')[1],
-          cvc,
+          paymentMethodId: paymentMethod.id,
           name,
-          couponId: promoCode,
+          couponId,
         }),
       })
+
       const data = await res.json()
+
+      if (data.requiresAction) {
+        const { error: actionError } = await stripe.confirmCardPayment(data.clientSecret)
+        if (actionError) {
+          setError(actionError.message)
+          setLoading(false)
+          return
+        }
+        navigate('/success', { state: { paid: true } })
+        return
+      }
+
       if (data.success) {
         navigate('/success', { state: { paid: true } })
       } else {
@@ -165,38 +208,18 @@ export default function Checkout() {
             </label>
 
             <label>
-              Card Number
-              <input
-                value={cardNumber}
-                onChange={e => setCardNumber(formatCardNumber(e.target.value))}
-                placeholder="1234 5678 9012 3456"
-                autoComplete="cc-number"
-                inputMode="numeric"
+              Card Details
+              <div
+                id="card-element"
+                style={{
+                  border: '1px solid var(--line)',
+                  borderRadius: 16,
+                  background: 'rgba(0,0,0,.3)',
+                  padding: '14px 15px',
+                  transition: 'border-color 0.15s ease',
+                }}
               />
             </label>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <label>
-                Expiry
-                <input
-                  value={expiry}
-                  onChange={e => setExpiry(formatExpiry(e.target.value))}
-                  placeholder="MM/YY"
-                  autoComplete="cc-exp"
-                  inputMode="numeric"
-                />
-              </label>
-              <label>
-                CVC
-                <input
-                  value={cvc}
-                  onChange={e => setCvc(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                  placeholder="123"
-                  autoComplete="cc-csc"
-                  inputMode="numeric"
-                />
-              </label>
-            </div>
 
             {/* Promo Code */}
             <label>
@@ -204,7 +227,13 @@ export default function Checkout() {
               <div style={{ display: 'flex', gap: 8 }}>
                 <input
                   value={promo}
-                  onChange={e => { setPromo(e.target.value); setPromoError(''); setPromoApplied(false); setDiscount(0); setPromoCode(null) }}
+                  onChange={e => {
+                    setPromo(e.target.value)
+                    setPromoError('')
+                    setPromoApplied(false)
+                    setDiscount(0)
+                    setCouponId(null)
+                  }}
                   placeholder="Enter code"
                   style={{ flex: 1 }}
                   disabled={promoApplied}
@@ -235,7 +264,10 @@ export default function Checkout() {
             </button>
 
             <p style={{ fontSize: 12, color: 'var(--soft)', textAlign: 'center', margin: 0 }}>
-              🔒 Payments processed securely by Stripe
+              🔒 Payments processed securely by{' '}
+              <a href="https://stripe.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--soft)', textDecoration: 'underline' }}>
+                Stripe
+              </a>
             </p>
           </div>
         </section>
