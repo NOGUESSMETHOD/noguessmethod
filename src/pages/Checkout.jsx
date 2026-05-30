@@ -93,7 +93,7 @@ export default function Checkout() {
       })
       const data = await res.json()
       if (data.success) {
-        navigate('/success')
+        navigate('/success', { state: { paid: true } })
       } else {
         setError(data.error || 'Payment failed. Please try again.')
       }
