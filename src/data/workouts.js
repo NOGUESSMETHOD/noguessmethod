@@ -116,9 +116,26 @@ export const WORKOUTS = {
 import SCHEDULE from './schedule.json'
 export { SCHEDULE }
 
-export function getTodayIndex() {
-  const dayOfMonth = new Date().getDate() - 1 // 0-indexed, so May 29 = index 28
-  return dayOfMonth % SCHEDULE.length
+/**
+ * Returns the 0-based index into SCHEDULE based on how many days
+ * have passed since the user joined. Falls back to day-of-month
+ * if joinedAt is not available.
+ *
+ * @param {string|null} joinedAt - ISO timestamp from profiles.joined_at
+ */
+export function getTodayIndex(joinedAt = null) {
+  if (joinedAt) {
+    const start = new Date(joinedAt)
+    // Zero out to midnight local time so partial first day = Day 1
+    start.setHours(0, 0, 0, 0)
+    const now = new Date()
+    now.setHours(0, 0, 0, 0)
+    const diffMs = now - start
+    const daysSinceJoin = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+    return daysSinceJoin % SCHEDULE.length
+  }
+  // Fallback: use day of month (original behaviour)
+  return (new Date().getDate() - 1) % SCHEDULE.length
 }
 
 export function getWeekLabel(idx) {
